@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<!-- saved from url=(0062)file:///C:/Users/Zuka/Documents/Prometheus/lua-renamer-v3.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LuaRenamer v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0f;
+    --panel: #141418;
+    --border: #2a2a35;
+    --accent: #a3ff47;
+    --accent2: #ff6b35;
+    --accent3: #47b3ff;
+    --text: #e8e8f0;
+    --muted: #5a5a70;
+    --mono: 'Space Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  header {
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -1px;
+  }
+
+  .badge {
+    background: #1a1a22;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.6rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    letter-spacing: 2px;
+  }
+
+  .badge.rbx { border-color: #ff6b35; color: #ff6b35; }
+
+  .header-actions { margin-left: auto; display: flex; gap: 0.5rem; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: #0f0f13;
+  }
+
+  .tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    cursor: pointer;
+    padding: 0.75rem 1.25rem;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* LAYOUT */
+  .workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .sidebar {
+    width: 280px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .editors {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .editor-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .editor-pane + .editor-pane { border-left: 1px solid var(--border); }
+
+  /* PANEL */
+  .panel-header {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* SIDEBAR TABS */
+  .sidebar-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stab {
+    flex: 1;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: all 0.15s;
+  }
+  .stab:hover { color: var(--text); }
+  .stab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .stab-content { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .stab-content.active { display: flex; }
+
+  /* MAPPINGS */
+  .mappings-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .mappings-list::-webkit-scrollbar { width: 3px; }
+  .mappings-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .mapping-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    gap: 0.25rem;
+    align-items: center;
+  }
+
+  .mapping-row input {
+    background: #1a1a22;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    padding: 0.3rem 0.4rem;
+    border-radius: 3px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .mapping-row input:focus { border-color: var(--accent); }
+  .mapping-row input.original { color: var(--accent2); }
+  .mapping-row input.replacement { color: var(--accent); }
+
+  .arrow { color: var(--muted); font-size: 0.65rem; }
+
+  .del-btn {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 0.85rem; padding: 2px 4px;
+    border-radius: 3px; transition: color 0.15s;
+  }
+  .del-btn:hover { color: #ff4444; }
+
+  .add-btn {
+    background: none; border: 1px dashed var(--border);
+    color: var(--muted); font-family: var(--mono); font-size: 0.68rem;
+    cursor: pointer; padding: 0.35rem; border-radius: 3px;
+    width: calc(100% - 1.2rem); margin: 0 0.6rem 0.5rem;
+    transition: all 0.15s;
+  }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .presets-block {
+    padding: 0.6rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .pblock-label {
+    font-size: 0.6rem; color: var(--muted);
+    width: 100%; margin-bottom: 0.15rem; letter-spacing: 1px;
+  }
+
+  .preset-btn {
+    background: #1a1a22; border: 1px solid var(--border);
+    color: var(--muted); font-family: var(--mono); font-size: 0.62rem;
+    cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 3px;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* SAVE/LOAD */
+  .save-load-block {
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .save-row { display: flex; gap: 0.35rem; }
+
+  .sl-input {
+    flex: 1;
+    background: #1a1a22; border: 1px solid var(--border);
+    color: var(--text); font-family: var(--mono); font-size: 0.68rem;
+    padding: 0.35rem 0.5rem; border-radius: 3px; outline: none;
+    transition: border-color 0.15s;
+  }
+  .sl-input:focus { border-color: var(--accent3); }
+
+  .sl-btn {
+    background: #1a1a22; border: 1px solid var(--border);
+    color: var(--text); font-family: var(--mono); font-size: 0.68rem;
+    cursor: pointer; padding: 0.35rem 0.6rem; border-radius: 3px;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .sl-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+  .sl-btn.danger:hover { border-color: #ff4444; color: #ff4444; }
+
+  .saved-maps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: 0.25rem;
+  }
+
+  .saved-map-item {
+    display: flex; align-items: center; gap: 0.35rem;
+    background: #1a1a22; border: 1px solid var(--border);
+    border-radius: 4px; padding: 0.4rem 0.5rem;
+  }
+
+  .saved-map-name {
+    flex: 1; font-size: 0.68rem; color: var(--accent3);
+  }
+
+  .saved-map-meta {
+    font-size: 0.6rem; color: var(--muted);
+  }
+
+  /* OPTIONS */
+  .options-block {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.67rem; cursor: pointer; color: var(--muted); }
+  label:hover { color: var(--text); }
+  input[type=checkbox] { accent-color: var(--accent); }
+
+  /* CODE */
+  .code-area {
+    flex: 1;
+    background: #0a0a0e;
+    border: none;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.75;
+    padding: 1rem 1.25rem;
+    resize: none;
+    outline: none;
+    width: 100%;
+    overflow-y: auto;
+  }
+
+  .code-area::placeholder { color: var(--muted); }
+
+  .output-area {
+    flex: 1;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-y: auto;
+    padding: 1rem 1.25rem;
+    font-size: 0.78rem;
+    line-height: 1.75;
+    background: #090910;
+    font-family: var(--mono);
+  }
+
+  .action-bar {
+    padding: 0.6rem 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .run-btn {
+    background: var(--accent); border: none;
+    color: #000; font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 0.75rem;
+    cursor: pointer; padding: 0.45rem 1.1rem;
+    border-radius: 4px; letter-spacing: 1px;
+    transition: opacity 0.15s;
+  }
+  .run-btn:hover { opacity: 0.85; }
+
+  .icon-btn {
+    background: #1a1a22; border: 1px solid var(--border);
+    color: var(--muted); font-family: var(--mono); font-size: 0.68rem;
+    cursor: pointer; padding: 0.45rem 0.75rem;
+    border-radius: 4px; transition: all 0.15s;
+  }
+  .icon-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  .status-text { font-size: 0.65rem; color: var(--muted); }
+  .ml-auto { margin-left: auto; }
+
+  /* VAR SCRAMBLER SECTION */
+  .var-info {
+    padding: 0.6rem 1rem;
+    font-size: 0.67rem;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+    flex-shrink: 0;
+  }
+
+  .var-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .var-item {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.68rem;
+  }
+
+  .var-orig { color: var(--accent2); min-width: 80px; }
+  .var-new { color: var(--accent); font-style: italic; }
+
+  .section-divider {
+    font-size: 0.6rem; color: var(--muted); letter-spacing: 2px;
+    padding: 0.4rem 0.6rem;
+    border-top: 1px solid var(--border);
+    text-transform: uppercase;
+  }
+
+  /* STRING ENCODER */
+  .enc-options {
+    padding: 0.6rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .enc-label { font-size: 0.67rem; color: var(--muted); margin-bottom: 0.15rem; }
+
+  select {
+    background: #1a1a22; border: 1px solid var(--border);
+    color: var(--text); font-family: var(--mono); font-size: 0.68rem;
+    padding: 0.35rem 0.5rem; border-radius: 3px; outline: none;
+    cursor: pointer;
+  }
+
+  /* VALIDATOR */
+  .vcheck {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    padding: 0.45rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: #1a1a22;
+    font-size: 0.67rem;
+    line-height: 1.5;
+  }
+
+  .vcheck.pass { border-color: #2a4a1a; background: #0f1f0a; }
+  .vcheck.fail { border-color: #4a1a1a; background: #1f0a0a; }
+  .vcheck.warn { border-color: #4a3a10; background: #1f180a; }
+
+  .vcheck-icon { font-size: 0.8rem; flex-shrink: 0; margin-top: 1px; }
+  .vcheck-body { flex: 1; }
+  .vcheck-title { font-weight: 700; margin-bottom: 0.1rem; }
+  .vcheck.pass .vcheck-title { color: var(--accent); }
+  .vcheck.fail .vcheck-title { color: #ff5555; }
+  .vcheck.warn .vcheck-title { color: #ffaa33; }
+  .vcheck-detail { color: var(--muted); font-size: 0.63rem; }
+  .vcheck-line { color: var(--accent3); font-size: 0.63rem; margin-top: 0.15rem; font-style: italic; }
+
+  .vsummary-pass { color: var(--accent); }
+  .vsummary-fail { color: #ff5555; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    background: var(--accent); color: #000;
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 0.75rem; padding: 0.6rem 1rem;
+    border-radius: 5px; opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.2s;
+    pointer-events: none;
+    z-index: 999;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>LuaRenamer</h1>
+  <span class="badge">v3.0</span>
+  <span class="badge rbx">RBX SAFE</span>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="importFile()">import .lua</button>
+    <button class="icon-btn" onclick="exportFile()">export .lua</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab(&#39;renamer&#39;)">Rename Map</button>
+  <button class="tab" onclick="switchTab(&#39;variables&#39;)">Var Scrambler</button>
+  <button class="tab" onclick="switchTab(&#39;strings&#39;)">String Encoder</button>
+  <button class="tab" onclick="switchTab(&#39;saved&#39;)">Saved Maps</button>
+  <button class="tab" onclick="switchTab(&#39;validator&#39;)">⚡ Validator</button>
+</div>
+
+<div class="workspace">
+  <div class="sidebar">
+
+    <!-- RENAME TAB -->
+    <div id="tab-renamer" class="stab-content active">
+      <div class="panel-header">
+        <span>Rename Rules</span>
+        <span id="ruleCount" style="color:var(--accent)">22</span>
+      </div>
+      <div class="mappings-list" id="mappingsList"><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="print" oninput="mappings[0].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="noob" oninput="mappings[0].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;z9b813mw61&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="function" oninput="mappings[1].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="skill" oninput="mappings[1].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;y48o23ecvck&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="return" oninput="mappings[2].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="gimme" oninput="mappings[2].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;2z0q99cyj9d&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="end" oninput="mappings[3].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="done" oninput="mappings[3].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;n03w4enfnla&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="local" oninput="mappings[4].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="myvar" oninput="mappings[4].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;i0dqstsaarl&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="if" oninput="mappings[5].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="maybe" oninput="mappings[5].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;1tz92vrjrte&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="then" oninput="mappings[6].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="oki" oninput="mappings[6].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;lg4sv6klavn&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="else" oninput="mappings[7].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="nope" oninput="mappings[7].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;aon3ey5ftp5&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="elseif" oninput="mappings[8].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="ormaybe" oninput="mappings[8].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;g90n29gpqo&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="while" oninput="mappings[9].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="keepgoing" oninput="mappings[9].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;xbo3ygq5rrb&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="for" oninput="mappings[10].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="each" oninput="mappings[10].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;bwxmqsxj1cg&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="do" oninput="mappings[11].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="start" oninput="mappings[11].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;z67oifdwow&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="repeat" oninput="mappings[12].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="doagain" oninput="mappings[12].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;eqfmpekyjui&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="until" oninput="mappings[13].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="stops" oninput="mappings[13].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;yjp00viugo&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="break" oninput="mappings[14].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="quit" oninput="mappings[14].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;ndgamdky5b&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="true" oninput="mappings[15].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="yes" oninput="mappings[15].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;g2cyfj1xjsq&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="false" oninput="mappings[16].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="no" oninput="mappings[16].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;4bjeii9hfna&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="nil" oninput="mappings[17].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="nothing" oninput="mappings[17].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;t7bcnxrxfz&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="not" oninput="mappings[18].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="nuh" oninput="mappings[18].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;iiqr9fop6v&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="and" oninput="mappings[19].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="also" oninput="mappings[19].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;mpj3sk4rsul&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="or" oninput="mappings[20].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="orr" oninput="mappings[20].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;mj8ux95k34b&#39;)">×</button>
+    </div><div class="mapping-row">
+      <input class="original" type="text" placeholder="original" value="in" oninput="mappings[21].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="inside" oninput="mappings[21].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow(&#39;bk7b1gzuk8w&#39;)">×</button>
+    </div></div>
+      <button class="add-btn" onclick="addRow()">+ add rule</button>
+      <div class="presets-block">
+        <span class="pblock-label">PRESETS</span>
+        <button class="preset-btn" onclick="loadPreset(&#39;noob&#39;)">noob</button>
+        <button class="preset-btn" onclick="loadPreset(&#39;alien&#39;)">alien</button>
+        <button class="preset-btn" onclick="loadPreset(&#39;yell&#39;)">LOUD</button>
+        <button class="preset-btn" onclick="loadPreset(&#39;rbx&#39;)">roblox api</button>
+        <button class="preset-btn" onclick="clearMappings()" style="margin-left:auto">clear</button>
+      </div>
+    </div>
+
+    <!-- VARIABLES TAB -->
+    <div id="tab-variables" class="stab-content">
+      <div class="var-info">
+        Detects <span style="color:var(--accent2)">local</span> variables in your code and scrambles them to random names. Roblox-executor safe — just valid identifiers.
+      </div>
+      <div class="panel-header" style="flex-shrink:0">
+        <span>Detected Locals</span>
+        <button class="icon-btn" style="font-size:0.6rem;padding:0.2rem 0.5rem" onclick="rescramble()">re-roll</button>
+      </div>
+      <div class="var-list" id="varList"><span style="color:var(--muted);font-size:0.68rem;padding:0.25rem">No locals found or scrambling disabled.</span></div>
+      <div class="section-divider">Options</div>
+      <div style="padding:0.6rem 1rem;display:flex;flex-direction:column;gap:0.4rem;flex-shrink:0">
+        <label><input type="checkbox" id="optScrambleVars"> Enable var scrambling</label>
+        <label><input type="checkbox" id="optPreserveGlobals" checked=""> Preserve globals (game, workspace, etc)</label>
+        <div style="font-size:0.62rem;color:var(--muted);margin-top:0.1rem">
+          Style: <select id="varStyle" style="margin-left:0.25rem">
+            <option value="underscore">_aB3x (underscore prefix)</option>
+            <option value="double">__xZ9k (double underscore)</option>
+            <option value="hex">v0xA3F (hex-like)</option>
+            <option value="l1">lIlIl (l/I confusion)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- STRINGS TAB -->
+    <div id="tab-strings" class="stab-content">
+      <div class="var-info">
+        Encodes string literals so they're not readable as plain text. All methods produce valid Lua 5.1 output.
+      </div>
+      <div class="enc-options">
+        <label><input type="checkbox" id="optEncodeStrings"> Enable string encoding</label>
+        <div>
+          <div class="enc-label">Method:</div>
+          <select id="encMethod">
+            <option value="charcode">string.char() — char codes</option>
+            <option value="concat">char concat — split chars</option>
+            <option value="hex">hex escape — \xNN</option>
+          </select>
+        </div>
+        <label><input type="checkbox" id="optSkipShort" checked=""> Skip strings ≤ 3 chars</label>
+        <label><input type="checkbox" id="optSkipRbxUrls" checked=""> Skip rbxasset:// urls</label>
+      </div>
+      <div class="var-info" style="border-top:none">
+        <span style="color:var(--accent3)">Note:</span> hex escape (\xNN) may not work in all Roblox executors. Use string.char() for max compatibility.
+      </div>
+    </div>
+
+    <!-- VALIDATOR TAB -->
+    <div id="tab-validator" class="stab-content">
+      <div class="panel-header">
+        <span>Syntax Validator</span>
+        <button class="run-btn" style="font-size:0.65rem;padding:0.3rem 0.8rem" onclick="runValidator()">RUN CHECK</button>
+      </div>
+      <div class="var-info">
+        Checks your <span style="color:var(--accent)">output</span> for common Lua syntax errors and broken renames before you run it in an executor.
+      </div>
+      <div id="validatorResults" style="flex:1;overflow-y:auto;padding:0.6rem;display:flex;flex-direction:column;gap:0.4rem">
+        <span style="color:var(--muted);font-size:0.68rem">Run the validator to check your output.</span>
+      </div>
+      <div style="padding:0.6rem;border-top:1px solid var(--border);flex-shrink:0">
+        <div id="validatorSummary" style="font-size:0.7rem;color:var(--muted)"></div>
+      </div>
+    </div>
+
+    <!-- SAVED MAPS TAB -->
+    <div id="tab-saved" class="stab-content">
+      <div class="panel-header"><span>Saved Maps</span></div>
+      <div class="save-load-block">
+        <div class="save-row">
+          <input class="sl-input" id="mapNameInput" type="text" placeholder="map name...">
+          <button class="sl-btn" onclick="saveCurrentMap()">save</button>
+        </div>
+        <div class="saved-maps-list" id="savedMapsList"><span style="color:var(--muted);font-size:0.68rem">No saved maps yet.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- EDITORS -->
+  <div class="editors">
+    <div class="editor-pane">
+      <div class="panel-header">Input Lua</div>
+      <div class="options-block">
+        <label><input type="checkbox" id="optWholeWord" checked=""> whole word</label>
+        <label><input type="checkbox" id="optCaseSensitive" checked=""> case sensitive</label>
+        <label><input type="checkbox" id="optAutoTransform" checked=""> auto-run</label>
+      </div>
+      <textarea class="code-area" id="inputCode" placeholder="-- paste your lua / roblox script here"></textarea>
+      <div class="action-bar">
+        <button class="run-btn" onclick="transform()">OBFUSCATE →</button>
+        <span class="status-text" id="inputStatus"></span>
+        <button class="icon-btn ml-auto" onclick="clearInput()">clear</button>
+      </div>
+    </div>
+
+    <div class="editor-pane">
+      <div class="panel-header">
+        <span>Output</span>
+        <span id="replStats" style="color:var(--accent);font-size:0.65rem">16 replacements</span>
+      </div>
+      <div class="options-block" style="justify-content:flex-end">
+        <span class="status-text" id="outputStatus">17 lines</span>
+      </div>
+      <pre class="output-area" id="outputArea">-- Roblox myvar script example
+myvar Players = game:GetService("Players")
+myvar localPlayer = Players.LocalPlayer
+myvar character = localPlayer.Character
+
+myvar skill getHumanoid(char)
+  myvar humanoid = char:FindFirstChild("Humanoid")
+  maybe humanoid oki
+    humanoid.WalkSpeed = 100
+    humanoid.JumpPower = 200
+    noob("Speed applied to: " .. localPlayer.Name)
+    gimme yes
+  done
+  gimme no
+done
+
+getHumanoid(character)</pre>
+      <div class="action-bar">
+        <button class="icon-btn" onclick="copyOutput()">copy</button>
+        <button class="icon-btn" onclick="copyOutputRaw()">copy raw</button>
+        <span class="status-text ml-auto" id="copyStatus"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<input type="file" id="fileInput" accept=".lua,.txt" style="display:none" onchange="handleFileImport(event)">
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────
+let mappings = [];
+let varMap = {}; // detected locals → scrambled names
+let savedMaps = JSON.parse(localStorage.getItem('luaRenamerMaps') || '{}');
+
+const ROBLOX_GLOBALS = new Set([
+  'game','workspace','script','math','string','table','os','coroutine','io',
+  'print','warn','error','tostring','tonumber','type','ipairs','pairs','next',
+  'select','unpack','pcall','xpcall','rawget','rawset','rawequal','rawlen',
+  'setmetatable','getmetatable','require','loadstring','loadfile','load',
+  'dofile','collectgarbage','newproxy','tick','wait','spawn','delay','task',
+  'Instance','Vector3','Vector2','CFrame','Color3','BrickColor','UDim','UDim2',
+  'Rect','Region3','NumberRange','NumberSequence','ColorSequence','Ray','Axes',
+  'Faces','Enum','_G','shared','RunService','Players','Workspace','ReplicatedStorage',
+  'ServerStorage','StarterGui','StarterPack','StarterPlayer','SoundService',
+  'TweenService','UserInputService','ContextActionService','GuiService',
+  'PathfindingService','PhysicsService','MarketplaceService','TextService',
+  'HttpService','DataStoreService','MessagingService','TeleportService',
+  'VirtualUser','ChatService','LocalizationService','LogService',
+  'true','false','nil','and','or','not','in',
+]);
+
+// ── PRESETS ─────────────────────────────────────────────────────────────
+const PRESETS = {
+  noob: [
+    ['print','noob'],['function','skill'],['return','gimme'],['end','done'],
+    ['local','myvar'],['if','maybe'],['then','oki'],['else','nope'],
+    ['elseif','ormaybe'],['while','keepgoing'],['for','each'],['do','start'],
+    ['repeat','doagain'],['until','stops'],['break','quit'],
+    ['true','yes'],['false','no'],['nil','nothing'],
+    ['not','nuh'],['and','also'],['or','orr'],['in','inside'],
+  ],
+  alien: [
+    ['print','xraal'],['function','zyx'],['return','vvrt'],['end','zzk'],
+    ['local','qrx'],['if','klz'],['then','xthn'],['else','vls'],
+    ['elseif','vlsklz'],['while','wrll'],['for','fxr'],['do','dxo'],
+    ['true','xrt'],['false','vrf'],['nil','nxl'],['not','nxt'],
+    ['and','xnd'],['or','xr'],['repeat','rpxt'],['until','ntl'],
+  ],
+  yell: [
+    ['print','PRINT'],['function','FUNCTION'],['return','RETURN'],['end','END'],
+    ['local','LOCAL'],['if','IF'],['then','THEN'],['else','ELSE'],
+    ['elseif','ELSEIF'],['while','WHILE'],['for','FOR'],['do','DO'],
+    ['repeat','REPEAT'],['until','UNTIL'],['break','BREAK'],
+    ['true','TRUE'],['false','FALSE'],['nil','NIL'],['not','NOT'],
+    ['and','AND'],['or','OR'],
+  ],
+  rbx: [
+    ['game','G4M3'],['workspace','W0RKSP4CE'],['Players','Pl4y3rs'],
+    ['LocalPlayer','L0c4lPl4y3r'],['Character','Ch4r4ct3r'],
+    ['Humanoid','H4m4n01d'],['HumanoidRootPart','Hr00tP4rt'],
+    ['WalkSpeed','W4lkSp33d'],['JumpPower','JumpP0w3r'],
+    ['wait','w41t'],['print','pr1nt'],['warn','w4rn'],['error','3rr0r'],
+    ['pcall','pc4ll'],['task','t4sk'],['spawn','sp4wn'],
+  ],
+};
+
+// ── TABS ────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.stab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  const tabs = ['renamer','variables','strings','validator','saved'];
+  document.querySelectorAll('.tab')[tabs.indexOf(name)].classList.add('active');
+  if (name === 'validator') runValidator();
+}
+
+// ── MAPPINGS ─────────────────────────────────────────────────────────────
+function addRow(orig = '', repl = '') {
+  mappings.push({ orig, repl, id: Math.random().toString(36).slice(2) });
+  renderMappings();
+}
+
+function removeRow(id) {
+  mappings = mappings.filter(m => m.id !== id);
+  renderMappings();
+}
+
+function renderMappings() {
+  const list = document.getElementById('mappingsList');
+  list.innerHTML = '';
+  mappings.forEach((m, i) => {
+    const row = document.createElement('div');
+    row.className = 'mapping-row';
+    row.innerHTML = `
+      <input class="original" type="text" placeholder="original" value="${esc(m.orig)}"
+             oninput="mappings[${i}].orig=this.value;debounceTransform()">
+      <span class="arrow">→</span>
+      <input class="replacement" type="text" placeholder="rename to" value="${esc(m.repl)}"
+             oninput="mappings[${i}].repl=this.value;debounceTransform()">
+      <button class="del-btn" onclick="removeRow('${m.id}')">×</button>
+    `;
+    list.appendChild(row);
+  });
+  document.getElementById('ruleCount').textContent = mappings.length;
+}
+
+function loadPreset(name) {
+  mappings = PRESETS[name].map(([orig, repl]) => ({ orig, repl, id: Math.random().toString(36).slice(2) }));
+  renderMappings();
+  debounceTransform();
+}
+
+function clearMappings() {
+  mappings = [];
+  renderMappings();
+  debounceTransform();
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// ── VARIABLE SCRAMBLER ───────────────────────────────────────────────────
+function detectLocals(code) {
+  const found = new Set();
+  // match: local name, local function name, function params
+  const patterns = [
+    /\blocal\s+function\s+(\w+)/g,
+    /\blocal\s+([\w,\s]+)\s*(?:=|$)/gm,
+    /function\s+\w+\s*\(([^)]*)\)/g,
+    /\bfor\s+(\w+(?:\s*,\s*\w+)*)\s+(?:in|=)/g,
+  ];
+  patterns.forEach(rx => {
+    let m;
+    while ((m = rx.exec(code)) !== null) {
+      m[1].split(',').forEach(v => {
+        const name = v.trim().split(/\s+/)[0];
+        if (name && /^[a-zA-Z_]\w*$/.test(name) && !ROBLOX_GLOBALS.has(name)) {
+          found.add(name);
+        }
+      });
+    }
+  });
+  return [...found];
+}
+
+const STYLES = {
+  underscore: () => '_' + randStr(5),
+  double:     () => '__' + randStr(5),
+  hex:        () => 'v0x' + Math.floor(Math.random()*0xFFFFF).toString(16).toUpperCase().padStart(5,'0'),
+  l1:         () => Array.from({length: 6+Math.floor(Math.random()*4)}, () => Math.random()>0.5?'l':'I').join(''),
+};
+
+function randStr(len) {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  return Array.from({length: len}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+function buildVarMap(code) {
+  if (!document.getElementById('optScrambleVars').checked) return {};
+  const locals = detectLocals(code);
+  const styleKey = document.getElementById('varStyle').value;
+  const gen = STYLES[styleKey];
+  const map = {};
+  const preserveGlobals = document.getElementById('optPreserveGlobals').checked;
+  locals.forEach(name => {
+    if (preserveGlobals && ROBLOX_GLOBALS.has(name)) return;
+    if (!map[name]) map[name] = gen();
+  });
+  return map;
+}
+
+function rescramble() {
+  transform();
+}
+
+function renderVarList(map) {
+  const list = document.getElementById('varList');
+  const keys = Object.keys(map);
+  if (!keys.length) {
+    list.innerHTML = '<span style="color:var(--muted);font-size:0.68rem;padding:0.25rem">No locals found or scrambling disabled.</span>';
+    return;
+  }
+  list.innerHTML = keys.map(k =>
+    `<div class="var-item"><span class="var-orig">${k}</span><span class="arrow" style="color:var(--muted);font-size:0.65rem">→</span><span class="var-new">${map[k]}</span></div>`
+  ).join('');
+}
+
+// ── STRING ENCODER ────────────────────────────────────────────────────────
+function encodeStrings(code) {
+  if (!document.getElementById('optEncodeStrings').checked) return code;
+  const method = document.getElementById('encMethod').value;
+  const skipShort = document.getElementById('optSkipShort').checked;
+  const skipRbx = document.getElementById('optSkipRbxUrls').checked;
+
+  return code.replace(/"([^"\\]*(\\.[^"\\]*)*)"|'([^'\\]*(\\.[^'\\]*)*)'/g, (match, g1, _2, g3) => {
+    const str = (g1 !== undefined ? g1 : g3) || '';
+    const unescaped = str.replace(/\\n/g,'\n').replace(/\\t/g,'\t').replace(/\\"/g,'"').replace(/\\'/g,"'").replace(/\\\\/g,'\\');
+    if (skipShort && unescaped.length <= 3) return match;
+    if (skipRbx && unescaped.startsWith('rbxasset://')) return match;
+
+    if (method === 'charcode') {
+      const codes = [...unescaped].map(c => c.charCodeAt(0)).join(',');
+      return `string.char(${codes})`;
+    } else if (method === 'concat') {
+      const parts = [...unescaped].map(c => {
+        const code = c.charCodeAt(0);
+        return `string.char(${code})`;
+      });
+      return parts.join('..');
+    } else if (method === 'hex') {
+      const hex = [...unescaped].map(c => '\\x' + c.charCodeAt(0).toString(16).padStart(2,'0')).join('');
+      return `"${hex}"`;
+    }
+    return match;
+  });
+}
+
+// ── TRANSFORM ─────────────────────────────────────────────────────────────
+let debounceTimer = null;
+function debounceTransform() {
+  if (!document.getElementById('optAutoTransform').checked) return;
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(transform, 250);
+}
+
+function transform() {
+  let code = document.getElementById('inputCode').value;
+  if (!code.trim()) {
+    document.getElementById('outputArea').textContent = '';
+    return;
+  }
+
+  const wholeWord = document.getElementById('optWholeWord').checked;
+  const caseSensitive = document.getElementById('optCaseSensitive').checked;
+  let totalReps = 0;
+
+  // 1. Rename mappings
+  mappings.forEach(m => {
+    if (!m.orig || !m.repl) return;
+    const flags = caseSensitive ? 'g' : 'gi';
+    let pattern = m.orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (wholeWord) pattern = `\\b${pattern}\\b`;
+    const rx = new RegExp(pattern, flags);
+    const hits = code.match(rx);
+    if (hits) totalReps += hits.length;
+    code = code.replace(rx, m.repl);
+  });
+
+  // 2. String encoding (before var scramble so we don't mangle generated code)
+  code = encodeStrings(code);
+
+  // 3. Variable scrambling
+  varMap = buildVarMap(document.getElementById('inputCode').value); // detect from original
+  renderVarList(varMap);
+  Object.entries(varMap).forEach(([orig, repl]) => {
+    const rx = new RegExp(`\\b${orig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`, 'g');
+    const hits = code.match(rx);
+    if (hits) totalReps += hits.length;
+    code = code.replace(rx, repl);
+  });
+
+  document.getElementById('outputArea').textContent = code;
+  document.getElementById('replStats').textContent = `${totalReps} replacements`;
+  document.getElementById('outputStatus').textContent =
+    `${code.split('\n').length} lines`;
+}
+
+// ── SAVE / LOAD MAPS ──────────────────────────────────────────────────────
+function saveCurrentMap() {
+  const name = document.getElementById('mapNameInput').value.trim();
+  if (!name) { toast('enter a name first'); return; }
+  savedMaps[name] = { rules: mappings.map(m => [m.orig, m.repl]), date: new Date().toLocaleDateString() };
+  localStorage.setItem('luaRenamerMaps', JSON.stringify(savedMaps));
+  renderSavedMaps();
+  toast(`saved "${name}"`);
+}
+
+function loadSavedMap(name) {
+  const m = savedMaps[name];
+  if (!m) return;
+  mappings = m.rules.map(([orig, repl]) => ({ orig, repl, id: Math.random().toString(36).slice(2) }));
+  renderMappings();
+  debounceTransform();
+  toast(`loaded "${name}"`);
+}
+
+function deleteSavedMap(name) {
+  delete savedMaps[name];
+  localStorage.setItem('luaRenamerMaps', JSON.stringify(savedMaps));
+  renderSavedMaps();
+}
+
+function renderSavedMaps() {
+  const list = document.getElementById('savedMapsList');
+  const keys = Object.keys(savedMaps);
+  if (!keys.length) {
+    list.innerHTML = '<span style="color:var(--muted);font-size:0.68rem">No saved maps yet.</span>';
+    return;
+  }
+  list.innerHTML = keys.map(name => `
+    <div class="saved-map-item">
+      <span class="saved-map-name">${esc(name)}</span>
+      <span class="saved-map-meta">${savedMaps[name].rules.length}r · ${savedMaps[name].date}</span>
+      <button class="sl-btn" style="font-size:0.62rem;padding:0.2rem 0.4rem" onclick="loadSavedMap('${esc(name)}')">load</button>
+      <button class="sl-btn danger" style="font-size:0.62rem;padding:0.2rem 0.4rem" onclick="deleteSavedMap('${esc(name)}')">del</button>
+    </div>
+  `).join('');
+}
+
+// ── FILE I/O ──────────────────────────────────────────────────────────────
+function importFile() { document.getElementById('fileInput').click(); }
+
+function handleFileImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('inputCode').value = ev.target.result;
+    debounceTransform();
+    toast('file imported');
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function exportFile() {
+  const content = document.getElementById('outputArea').textContent;
+  if (!content.trim()) { toast('nothing to export'); return; }
+  const blob = new Blob([content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'obfuscated.lua';
+  a.click();
+  toast('exported obfuscated.lua');
+}
+
+// ── CLIPBOARD ─────────────────────────────────────────────────────────────
+function copyOutput() {
+  navigator.clipboard.writeText(document.getElementById('outputArea').textContent)
+    .then(() => toast('copied!'));
+}
+
+function copyOutputRaw() {
+  // same for now, could strip comments in future
+  copyOutput();
+}
+
+function clearInput() {
+  document.getElementById('inputCode').value = '';
+  document.getElementById('outputArea').textContent = '';
+  document.getElementById('replStats').textContent = '';
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ── VALIDATOR ─────────────────────────────────────────────────────────────
+const LUA_KEYWORDS = ['and','break','do','else','elseif','end','false','for',
+  'function','goto','if','in','local','nil','not','or','repeat','return',
+  'then','true','until','while'];
+
+function runValidator() {
+  const code = document.getElementById('outputArea').textContent;
+  const results = [];
+
+  if (!code.trim()) {
+    document.getElementById('validatorResults').innerHTML =
+      '<span style="color:var(--muted);font-size:0.68rem">No output to validate yet. Run the obfuscator first.</span>';
+    document.getElementById('validatorSummary').innerHTML = '';
+    return;
+  }
+
+  // ── CHECK 1: Balanced do/end ──────────────────────────────────────────
+  (function() {
+    let depth = 0;
+    let firstUnmatched = -1;
+    const lines = code.split('\n');
+    // strip strings and comments for this check
+    const stripped = stripStringsAndComments(code);
+    const stLines = stripped.split('\n');
+    const openers = /\b(function|do|if|while|for|repeat)\b/g;
+    const closers = /\bend\b/g;
+    // count openers vs ends (repeat..until doesn't use end, if uses end, function uses end)
+    let opens = 0, closes = 0;
+    stLines.forEach((line, i) => {
+      const openMatches = line.match(/\b(function|do|if|while|for)\b/g);
+      const closeMatches = line.match(/\bend\b/g);
+      if (openMatches) opens += openMatches.length;
+      if (closeMatches) closes += closeMatches.length;
+    });
+    if (opens === closes) {
+      results.push({ status: 'pass', title: 'Block balance OK', detail: `${opens} openers, ${closes} ends — balanced` });
+    } else {
+      results.push({ status: 'fail', title: 'Unbalanced blocks', detail: `${opens} block openers but ${closes} "end" keywords — script will crash`, line: opens > closes ? 'Missing one or more "end"' : 'Too many "end" keywords' });
+    }
+  })();
+
+  // ── CHECK 2: Balanced parentheses ────────────────────────────────────
+  (function() {
+    const stripped = stripStringsAndComments(code);
+    let depth = 0, failLine = -1;
+    stripped.split('\n').forEach((line, i) => {
+      for (const ch of line) {
+        if (ch === '(') depth++;
+        else if (ch === ')') { depth--; if (depth < 0 && failLine < 0) failLine = i+1; }
+      }
+    });
+    if (depth === 0 && failLine < 0) {
+      results.push({ status: 'pass', title: 'Parentheses balanced', detail: 'All ( ) pairs match' });
+    } else {
+      results.push({ status: 'fail', title: 'Unbalanced parentheses', detail: `Net depth: ${depth > 0 ? '+'+depth+' unclosed (' : depth+' extra )'}`, line: failLine > 0 ? `First issue near line ${failLine}` : '' });
+    }
+  })();
+
+  // ── CHECK 3: Balanced brackets ───────────────────────────────────────
+  (function() {
+    const stripped = stripStringsAndComments(code);
+    let sq = 0, cu = 0;
+    for (const ch of stripped) {
+      if (ch === '[') sq++;
+      else if (ch === ']') sq--;
+      else if (ch === '{') cu++;
+      else if (ch === '}') cu--;
+    }
+    if (sq === 0 && cu === 0) {
+      results.push({ status: 'pass', title: 'Brackets balanced', detail: 'All [ ] and { } pairs match' });
+    } else {
+      const msg = [];
+      if (sq !== 0) msg.push(`[ ] net: ${sq > 0 ? '+'+sq : sq}`);
+      if (cu !== 0) msg.push(`{ } net: ${cu > 0 ? '+'+cu : cu}`);
+      results.push({ status: 'fail', title: 'Unbalanced brackets', detail: msg.join(' · ') });
+    }
+  })();
+
+  // ── CHECK 4: Lua keyword used as identifier ───────────────────────────
+  (function() {
+    // Check if any rename rule output is a reserved keyword
+    const brokenRules = mappings.filter(m => LUA_KEYWORDS.includes(m.repl) && m.repl && m.orig !== m.repl);
+    if (brokenRules.length === 0) {
+      results.push({ status: 'pass', title: 'No keyword collisions', detail: 'None of your rename targets are Lua reserved words' });
+    } else {
+      brokenRules.forEach(r => {
+        results.push({ status: 'fail', title: `Keyword collision: "${r.repl}"`, detail: `"${r.orig}" → "${r.repl}" but "${r.repl}" is a Lua keyword — this will break execution`, line: 'Fix: choose a different rename target' });
+      });
+    }
+  })();
+
+  // ── CHECK 5: Renamed keyword still appears in control structures ──────
+  (function() {
+    const controlKws = ['if','then','else','elseif','end','do','while','for',
+      'function','return','local','repeat','until','break','not','and','or','in'];
+    const stripped = stripStringsAndComments(code);
+    const missing = [];
+    // heuristic: if code has function calls or assignments but no 'end', probably broken
+    const hasBlocks = /\b(if|while|for|function)\b/.test(stripped);
+    const hasEnd = /\bend\b/.test(stripped);
+    // check each control keyword that was renamed
+    const renamedControls = mappings.filter(m => controlKws.includes(m.orig) && m.repl && m.orig !== m.repl);
+    if (renamedControls.length > 0) {
+      // these are renamed — check if the renamed version actually appears
+      const issues = [];
+      renamedControls.forEach(r => {
+        const rx = new RegExp(`\\b${r.repl.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`);
+        if (!rx.test(stripped) && new RegExp(`\\b${r.orig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`).test(stripStringsAndComments(document.getElementById('inputCode').value))) {
+          issues.push(`"${r.orig}" → "${r.repl}" but "${r.repl}" not found in output`);
+        }
+      });
+      if (issues.length) {
+        issues.forEach(msg => results.push({ status: 'warn', title: 'Possible missing rename', detail: msg, line: 'Check "whole word" option is enabled' }));
+      } else {
+        results.push({ status: 'pass', title: 'Control keyword renames found', detail: `${renamedControls.length} renamed control keyword(s) present in output` });
+      }
+    }
+  })();
+
+  // ── CHECK 6: string.char usage valid (no out-of-range codes) ─────────
+  (function() {
+    if (!document.getElementById('optEncodeStrings').checked) return;
+    const badCodes = [];
+    const rx = /string\.char\(([^)]+)\)/g;
+    let m;
+    while ((m = rx.exec(code)) !== null) {
+      const codes = m[1].split(',').map(s => parseInt(s.trim()));
+      codes.forEach(c => { if (isNaN(c) || c < 0 || c > 255) badCodes.push(c); });
+    }
+    if (badCodes.length === 0) {
+      results.push({ status: 'pass', title: 'string.char() codes valid', detail: 'All char codes are in range 0–255' });
+    } else {
+      results.push({ status: 'fail', title: 'Invalid char codes', detail: `Out-of-range codes found: ${badCodes.slice(0,5).join(', ')}${badCodes.length>5?' ...':''}` });
+    }
+  })();
+
+  // ── CHECK 7: Empty output / no-op renames ────────────────────────────
+  (function() {
+    const inputCode = document.getElementById('inputCode').value;
+    if (code === inputCode) {
+      results.push({ status: 'warn', title: 'Output identical to input', detail: 'No changes were made — check your rename rules or options' });
+    } else {
+      const linesBefore = inputCode.split('\n').length;
+      const linesAfter = code.split('\n').length;
+      results.push({ status: 'pass', title: 'Output differs from input', detail: `${linesBefore} lines in → ${linesAfter} lines out` });
+    }
+  })();
+
+  // ── CHECK 8: Roblox executor compat warnings ──────────────────────────
+  (function() {
+    const issues = [];
+    if (/\\x[0-9a-fA-F]{2}/.test(code)) {
+      issues.push('Hex escapes (\\xNN) detected — may fail in some executors (Fluxus, older Synapse)');
+    }
+    if (/\bgoto\b/.test(code)) {
+      issues.push('"goto" detected — not supported in Roblox Lua 5.1');
+    }
+    if (/\blocal\s+</.test(code)) {
+      issues.push('Lua 5.4 attribute syntax detected — not supported in Roblox');
+    }
+    if (code.length > 500000) {
+      issues.push(`Large output (${(code.length/1000).toFixed(1)}KB) — some executors have script size limits`);
+    }
+    if (issues.length === 0) {
+      results.push({ status: 'pass', title: 'Executor compat OK', detail: 'No known Roblox executor compatibility issues detected' });
+    } else {
+      issues.forEach(msg => results.push({ status: 'warn', title: 'Executor warning', detail: msg }));
+    }
+  })();
+
+  // ── RENDER ────────────────────────────────────────────────────────────
+  const container = document.getElementById('validatorResults');
+  const icons = { pass: '✓', fail: '✗', warn: '⚠' };
+  container.innerHTML = results.map(r => `
+    <div class="vcheck ${r.status}">
+      <span class="vcheck-icon">${icons[r.status]}</span>
+      <div class="vcheck-body">
+        <div class="vcheck-title">${r.title}</div>
+        <div class="vcheck-detail">${r.detail}</div>
+        ${r.line ? `<div class="vcheck-line">${r.line}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  const fails = results.filter(r => r.status === 'fail').length;
+  const warns = results.filter(r => r.status === 'warn').length;
+  const passes = results.filter(r => r.status === 'pass').length;
+
+  const summary = document.getElementById('validatorSummary');
+  if (fails === 0 && warns === 0) {
+    summary.innerHTML = `<span class="vsummary-pass">✓ All ${passes} checks passed — should be executor-safe</span>`;
+  } else if (fails === 0) {
+    summary.innerHTML = `<span style="color:#ffaa33">⚠ ${passes} passed · ${warns} warning(s) — review before running</span>`;
+  } else {
+    summary.innerHTML = `<span class="vsummary-fail">✗ ${fails} error(s) · ${warns} warning(s) · ${passes} passed — fix errors first</span>`;
+  }
+}
+
+function stripStringsAndComments(code) {
+  // Remove single-line comments
+  let result = code.replace(/--[^\n]*/g, '');
+  // Remove string literals (basic — handles " and ' strings)
+  result = result.replace(/"([^"\\]|\\.)*"/g, '""');
+  result = result.replace(/'([^'\\]|\\.)*'/g, "''");
+  // Remove long strings [[ ]]
+  result = result.replace(/\[\[[\s\S]*?\]\]/g, '[[]]');
+  return result;
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('inputCode').addEventListener('input', debounceTransform);
+  document.getElementById('optWholeWord').addEventListener('change', debounceTransform);
+  document.getElementById('optCaseSensitive').addEventListener('change', debounceTransform);
+  document.getElementById('optScrambleVars').addEventListener('change', debounceTransform);
+  document.getElementById('optPreserveGlobals').addEventListener('change', debounceTransform);
+  document.getElementById('varStyle').addEventListener('change', debounceTransform);
+  document.getElementById('optEncodeStrings').addEventListener('change', debounceTransform);
+  document.getElementById('encMethod').addEventListener('change', debounceTransform);
+  document.getElementById('optSkipShort').addEventListener('change', debounceTransform);
+  document.getElementById('optSkipRbxUrls').addEventListener('change', debounceTransform);
+
+  loadPreset('noob');
+  renderSavedMaps();
+
+  document.getElementById('inputCode').value =
+`-- Roblox local script example
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+local character = localPlayer.Character
+
+local function getHumanoid(char)
+  local humanoid = char:FindFirstChild("Humanoid")
+  if humanoid then
+    humanoid.WalkSpeed = 100
+    humanoid.JumpPower = 200
+    print("Speed applied to: " .. localPlayer.Name)
+    return true
+  end
+  return false
+end
+
+getHumanoid(character)`;
+  transform();
+});
+</script>
+
+
+</body></html>
